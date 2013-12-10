@@ -57,10 +57,6 @@ Custom variables
 "_paq.push(['setCustomVariable', '1','environment','production']);",
 "_paq.push(['setCustomVariable', '1','is_user','yes']);"
 );``
-            
-* If you want to change the title of your pages inside the Piwik tracker,
-  you can set ```$wgPiwikActionName``` inside your LocalSettings.php file.
 
-* In case you want to include the title as, for example,
-   "wiki/Title of the page", you can set ```$wgPiwikUsePageTitle``` to
-  ```true``` and set ```$wgPiwikActionName``` to ```wiki/```. The extension will print piwik_action_name = 'wiki/Title of the page';
+* To exempt certain users from tracking (like bots), you can give them the "skip-piwik" userright.
+  By default this is assigned to the "bot" and "sysop" group.

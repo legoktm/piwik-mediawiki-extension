@@ -5,81 +5,45 @@ class PiwikHooks {
 	/**
 	 * Initialize the Piwik Hook
 	 * 
-	 * @param string $skin
+	 * @param Skin $skin
 	 * @param string $text
 	 * @return bool
 	 */
-	public static function PiwikSetup ($skin, &$text = '')
-	{
-		$text .= PiwikHooks::AddPiwik( $skin->getTitle() );
-		return true;
-	}
-	
-	/**
-	 * Add piwik script
-	 * @param string $title
-	 * @return string
-	 */
-	public static function AddPiwik ($title) {
-		
-		global $wgPiwikIDSite, $wgPiwikURL, $wgPiwikIgnoreSysops, 
-			   $wgPiwikIgnoreBots, $wgUser, $wgScriptPath, 
-			   $wgPiwikCustomJS, $wgPiwikActionName, $wgPiwikUsePageTitle,
-			   $wgPiwikDisableCookies;
-		
+	public static function onSkinAfterBottomScripts( Skin $skin, &$text ) {
+
+		global $wgPiwikIDSite, $wgPiwikURL, $wgPiwikCustomJS, $wgPiwikDisableCookies;
+
+		$user = $skin->getUser();
+
 		// Is piwik disabled for bots?
-		if ( $wgUser->isAllowed( 'bot' ) && $wgPiwikIgnoreBots ) {
-			return "<!-- Piwik extension is disabled for bots -->";
+		if ( $user->isAllowed( 'skip-piwik' ) ) {
+			$text .= "<!-- Piwik tracking disabled for this user -->";
+			return true;
 		}
-		
-		// Ignore Wiki System Operators
-		if ( $wgUser->isAllowed( 'protect' ) && $wgPiwikIgnoreSysops ) {
-			return "<!-- Piwik tracking is disabled for users with 'protect' rights (i.e., sysops) -->";
-		}
-		
-		// Missing configuration parameters 
+
+		// Missing configuration parameters
 		if ( empty( $wgPiwikIDSite ) || empty( $wgPiwikURL ) ) {
-			return "<!-- You need to set the settings for Piwik -->";
+			wfDebug( 'Piwik not configured correctly, make sure $wgPiwikIDSite and $wgPiwikURL are set' );
+			$text .= "<!-- You need to set the settings for Piwik -->";
+			return true;
 		}
-		
-		if ( $wgPiwikUsePageTitle ) {
-			$wgPiwikPageTitle = $title->getPrefixedText();
-		
-			$wgPiwikFinalActionName = $wgPiwikActionName;
-			$wgPiwikFinalActionName .= $wgPiwikPageTitle;
-		} else {
-			$wgPiwikFinalActionName = $wgPiwikActionName;
-		}
-		
-		// Check if disablecookies flag
-		if ($wgPiwikDisableCookies) {
-			$disableCookiesStr = PHP_EOL . '  _paq.push(["disableCookies"]);';
-		} else $disableCookiesStr = null;
-		
+
+		$disableCookiesStr = $wgPiwikDisableCookies ? "\n" . '  _paq.push(["disableCookies"]);' : '';
+
 		// Check if we have custom JS
-		if (!empty($wgPiwikCustomJS)) {
-			
+		$customJs = '';
+		if ( !empty( $wgPiwikCustomJS ) ) {
+
 			// Check if array is given
-			// If yes we have multiple lines/variables to declare
-			if (is_array($wgPiwikCustomJS)) {
-				
-				// Make empty string with a new line
-				$customJs = PHP_EOL;
-				
-				// Store the lines in the $customJs line
-				foreach ($wgPiwikCustomJS as $customJsLine) { 
-					$customJs .= $customJsLine;
-				}
-			
-			// CustomJs is string
-			} else $customJs = PHP_EOL . $wgPiwikCustomJS;
-			
-		// Contents are empty
-		} else $customJs = null;
-		
-		// Prevent XSS
-		$wgPiwikFinalActionName = Xml::encodeJsVar( $wgPiwikFinalActionName );
-		
+			if ( !is_array( $wgPiwikCustomJS ) ) {
+				$wgPiwikCustomJS = array( $wgPiwikCustomJS );
+			}
+			// Make empty string with a new line
+			$customJs = "\n";
+			// Store the lines in the $customJs line
+			$customJs .= implode( '', $wgPiwikCustomJS );
+		}
+
 		// Piwik script
 		$script = <<<PIWIK
 <!-- Piwik -->
@@ -102,11 +66,11 @@ class PiwikHooks {
 <noscript><img src="http://{$wgPiwikURL}/piwik.php?idsite={$wgPiwikIDSite}&amp;rec=1" style="border:0" alt="" /></noscript>
 <!-- End Piwik -->
 PIWIK;
-		
-		return $script;
-		
+
+		$text .= $script;
+
+		return true;
 	}
-	
 }
 
 
